@@ -1,0 +1,112 @@
+{# ======================  EDIT THESE THREE LINES  ====================== #}
+{% set SHOP_NAME = "My Shop" %}
+{% set USER_NAME = "Vishal K" %}
+{% set USER_ROLE = "Owner" %}
+{# ===================================================================== #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Inventory{% endblock %} · {{ SHOP_NAME }}</title>
+  <script>
+    // apply saved theme BEFORE the page paints (prevents a white flash)
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <aside class="sidebar">
+    <a class="logo" href="{{ url_for('dashboard') }}" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    </a>
+
+    <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}" href="{{ url_for('dashboard') }}" title="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint in ('products','add_product','edit_product','import_csv') }}" href="{{ url_for('products') }}" title="Products">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7L12 12l8.7-5"/><path d="M12 22V12"/></svg>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint == 'stock' }}" href="{{ url_for('stock') }}" title="Stock in / out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3"/><path d="M17 20V4M17 4l-3 3M17 4l3 3"/></svg>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint == 'low_stock' }}" href="{{ url_for('low_stock') }}" title="Low stock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint == 'history' }}" href="{{ url_for('history') }}" title="History">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    </a>
+
+    <div class="spacer"></div>
+    <div class="avatar-sm" title="{{ USER_NAME }}">{{ USER_NAME[:1]|upper }}{{ (USER_NAME.split()[-1][:1] if USER_NAME.split()|length > 1 else '')|upper }}</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="title">Inventory</span>
+      <span class="shop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg>
+        {{ SHOP_NAME }}
+      </span>
+
+      <form class="top-search" action="{{ url_for('products') }}" method="get">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" name="search" placeholder="Search products…" value="{{ request.args.get('search', '') }}">
+      </form>
+
+      <div class="top-right">
+        <button type="button" class="theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <div class="clock"><span id="clock-time">--:--</span><small id="clock-ampm"></small></div>
+        <div class="user-chip">
+          <div class="avatar-sm">{{ USER_NAME[:1]|upper }}{{ (USER_NAME.split()[-1][:1] if USER_NAME.split()|length > 1 else '')|upper }}</div>
+          <div class="who">
+            <div class="name">{{ USER_NAME }}</div>
+            <div class="role">{{ USER_ROLE }}</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">Programming with Python (BTCS2101) · Mini Project</footer>
+  </div>
+
+  <script>
+    // live clock in the top bar
+    function tick() {
+      var d = new Date(), h = d.getHours(), m = d.getMinutes();
+      var ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      document.getElementById("clock-time").textContent = h + ":" + (m < 10 ? "0" : "") + m;
+      document.getElementById("clock-ampm").textContent = ampm;
+    }
+    tick();
+    setInterval(tick, 20000);
+
+    // dark mode on/off button
+    document.getElementById("theme-toggle").addEventListener("click", function () {
+      var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("theme", next); } catch (e) {}
+    });
+  </script>
+</body>
+</html>

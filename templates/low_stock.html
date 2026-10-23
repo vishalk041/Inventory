@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "macros.html" import product_tile, sku, status_badge %}
+{% block title %}Low stock{% endblock %}
+{% block content %}
+<h1>Low-stock report</h1>
+<p class="subtitle">Products at or below their reorder level.</p>
+
+<section class="panel flush">
+  {% if items %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>In stock</th><th>Reorder at</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for p in items %}
+    <tr>
+      <td><div class="product-cell">{{ product_tile(p.category) }}{{ p.name }}</div></td>
+      <td class="sku">{{ sku(p) }}</td>
+      <td>{{ p.category }}</td>
+      <td><span class="num {{ 'red' if p.quantity == 0 else 'orange' }}">{{ p.quantity }}</span></td>
+      <td>{{ p.reorder_level }}</td>
+      <td>{{ status_badge(p) }}</td>
+      <td><a href="{{ url_for('stock', product_id=p.id) }}">Restock</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <div class="empty">Nothing to restock right now.</div>
+  {% endif %}
+</section>
+{% endblock %}

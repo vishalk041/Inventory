@@ -1,0 +1,13 @@
+name,category,price,quantity,reorder_level
+Basmati Rice 1kg,Grocery,95.00,40,10
+Sugar 1kg,Grocery,45.00,8,10
+Tata Salt 1kg,Grocery,28.00,25,8
+Mustard Oil 1L,Grocery,160.00,12,6
+Maggi Noodles,Snacks,14.00,60,20
+Lays Chips,Snacks,20.00,3,15
+Parle-G Biscuits,Snacks,10.00,0,20
+Notebook A4,Stationery,45.00,30,10
+Blue Pen,Stationery,10.00,100,25
+Pencil Box,Stationery,60.00,5,5
+Lux Soap,Personal Care,38.00,22,10
+Colgate Toothpaste,Personal Care,55.00,4,8

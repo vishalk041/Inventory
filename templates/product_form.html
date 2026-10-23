@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if editing else 'Add' }} product{% endblock %}
+{% block content %}
+<h1>{{ 'Edit product' if editing else 'Add product' }}</h1>
+<p class="subtitle">{{ 'Update the details below.' if editing else 'Fill in the details of the new product.' }}</p>
+
+<form method="post" class="panel form">
+  <label>Name
+    <input type="text" name="name" required maxlength="80" value="{{ product.get('name', '') }}">
+  </label>
+  <label>Category
+    <input type="text" name="category" placeholder="e.g. Grocery, Stationery" value="{{ product.get('category', '') }}">
+  </label>
+  <label>Price (₹)
+    <input type="number" name="price" step="0.01" min="0" required value="{{ product.get('price', '') }}">
+  </label>
+  {% if not editing %}
+  <label>Opening quantity
+    <input type="number" name="quantity" min="0" required value="{{ product.get('quantity', 0) }}">
+  </label>
+  {% else %}
+  <p class="muted">Current quantity: <strong>{{ product.quantity }}</strong>. To change it, use <a href="{{ url_for('stock', product_id=product.id) }}">Stock In/Out</a> so the history stays accurate.</p>
+  {% endif %}
+  <label>Reorder level (alert when stock falls to this number)
+    <input type="number" name="reorder_level" min="0" required value="{{ product.get('reorder_level', 5) }}">
+  </label>
+  <div class="actions">
+    <button class="btn" type="submit">Save</button>
+    <a class="btn ghost" href="{{ url_for('products') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

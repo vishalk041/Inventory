@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "macros.html" import product_tile, kind_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<section class="stats">
+  <div class="stat">
+    <div class="label">Total products</div>
+    <div class="value">{{ summary.total_products }}</div>
+    <div class="hint">{{ summary.total_units }} units · ₹{{ "{:,.2f}".format(summary.total_value) }} value</div>
+  </div>
+  <div class="stat">
+    <div class="label">Low stock</div>
+    <div class="value orange">{{ summary.low_stock_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Out of stock</div>
+    <div class="value red">{{ summary.out_of_stock_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Categories</div>
+    <div class="value blue">{{ summary.categories }}</div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="panel">
+    <h2>Stock by category</h2>
+    {% if by_category %}
+      {% set biggest = by_category.values()|max or 1 %}
+      {% for name, units in by_category.items() %}
+        <div class="bar-row">
+          <span class="bar-label">{{ name }}</span>
+          <div class="bar-track"><div class="bar-fill" style="width: {{ (units / biggest * 100)|round|int }}%"></div></div>
+          <span class="bar-value">{{ units }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="muted">No products yet. <a href="{{ url_for('add_product') }}">Add your first product</a>.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Needs restocking</h2>
+    {% if low_stock %}
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Product</th><th>Qty</th><th>Reorder at</th></tr></thead>
+        <tbody>
+        {% for p in low_stock[:6] %}
+        <tr>
+          <td><a class="product-cell" href="{{ url_for('stock', product_id=p.id) }}" style="color:inherit">{{ product_tile(p.category) }}{{ p.name }}</a></td>
+          <td><span class="num {{ 'red' if p.quantity == 0 else 'orange' }}">{{ p.quantity }}</span></td>
+          <td>{{ p.reorder_level }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if low_stock|length > 6 %}<p><a href="{{ url_for('low_stock') }}">See all {{ low_stock|length }} →</a></p>{% endif %}
+    {% else %}
+      <p class="muted">Everything is well stocked.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="panel flush">
+  <div style="padding:20px 20px 0"><h2>Recent activity</h2></div>
+  {% if recent %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for t in recent %}
+    <tr>
+      <td class="muted">{{ t.created_at }}</td>
+      <td><strong>{{ t.product_name }}</strong></td>
+      <td>{{ kind_badge(t) }}</td>
+      <td class="num">{{ t.quantity }}</td>
+      <td class="muted">{{ t.note }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <div class="empty">No activity yet.</div>
+  {% endif %}
+</section>
+{% endblock %}

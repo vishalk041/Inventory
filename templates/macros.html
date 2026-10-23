@@ -1,0 +1,31 @@
+{# Small reusable pieces shared by several pages. #}
+
+{# Emoji + tile colour chosen from the category name. Edit the lists to suit your shop. #}
+{% macro product_tile(category) -%}
+  {%- set c = (category or '')|lower -%}
+  {%- if 'drink' in c or 'beverage' in c %}<span class="tile t-blue">🥤</span>
+  {%- elif 'snack' in c %}<span class="tile t-yellow">🍪</span>
+  {%- elif 'grocer' in c %}<span class="tile t-green">🛒</span>
+  {%- elif 'food' in c or 'bakery' in c %}<span class="tile t-pink">🥐</span>
+  {%- elif 'station' in c %}<span class="tile t-yellow">✏️</span>
+  {%- elif 'care' in c or 'beauty' in c %}<span class="tile t-green">🧴</span>
+  {%- elif 'electr' in c %}<span class="tile t-blue">🔌</span>
+  {%- else %}<span class="tile t-grey">📦</span>{% endif -%}
+{%- endmacro %}
+
+{# Display-only SKU code built from the category and the product id, e.g. GRO-007 #}
+{% macro sku(p) -%}
+  {{ ((p.category or 'GEN')[:3])|upper }}-{{ '%03d'|format(p.id) }}
+{%- endmacro %}
+
+{# Status badge for a product #}
+{% macro status_badge(p) -%}
+  {%- if p.quantity == 0 %}<span class="badge danger">Out of stock</span>
+  {%- elif p.quantity <= p.reorder_level %}<span class="badge warn">Low stock</span>
+  {%- else %}<span class="badge ok">In stock</span>{% endif -%}
+{%- endmacro %}
+
+{# Stock / Sale label for a transaction #}
+{% macro kind_badge(t) -%}
+  <span class="badge {{ 'ok' if t.kind == 'IN' else 'warn' }}">{{ 'Stock in' if t.kind == 'IN' else 'Stock out' }}</span>
+{%- endmacro %}

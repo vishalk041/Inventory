@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros.html" import kind_badge %}
+{% block title %}History{% endblock %}
+{% block content %}
+<h1>Transaction history</h1>
+<p class="subtitle">Every stock movement, newest first.</p>
+
+<form class="toolbar" method="get">
+  <select name="product_id" onchange="this.form.submit()">
+    <option value="">All products</option>
+    {% for p in products %}
+      <option value="{{ p.id }}" {{ 'selected' if p.id == selected }}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn ghost" type="submit">Filter</button>
+</form>
+
+<section class="panel flush">
+  {% if transactions %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td class="sku">{{ t.id }}</td>
+      <td class="muted">{{ t.created_at }}</td>
+      <td><strong>{{ t.product_name }}</strong></td>
+      <td>{{ kind_badge(t) }}</td>
+      <td class="num">{{ t.quantity }}</td>
+      <td class="muted">{{ t.note }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <div class="empty">No transactions found.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "macros.html" import kind_badge %}
+{% block title %}Stock In/Out{% endblock %}
+{% block content %}
+<h1>Stock In / Out</h1>
+<p class="subtitle">Record a delivery or a sale. The stock count updates automatically.</p>
+
+{% if products %}
+<form method="post" class="panel form">
+  <label>Product
+    <select name="product_id" required>
+      <option value="">Choose a product…</option>
+      {% for p in products %}
+        <option value="{{ p.id }}" {{ 'selected' if p.id == preselected }}>{{ p.name }} (in stock: {{ p.quantity }})</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Type
+    <select name="kind">
+      <option value="IN">Stock in (new delivery)</option>
+      <option value="OUT">Stock out (sale / damage)</option>
+    </select>
+  </label>
+  <label>Quantity
+    <input type="number" name="quantity" min="1" required>
+  </label>
+  <label>Note (optional)
+    <input type="text" name="note" placeholder="e.g. Sold to customer, Supplier delivery">
+  </label>
+  <div class="actions"><button class="btn" type="submit">Record</button></div>
+</form>
+{% else %}
+<div class="panel muted">Add a product first. <a href="{{ url_for('add_product') }}">Add product</a></div>
+{% endif %}
+
+<section class="panel flush">
+  <div style="padding:20px 20px 0"><h2>Latest movements</h2></div>
+  {% if history %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for t in history %}
+    <tr>
+      <td class="muted">{{ t.created_at }}</td>
+      <td><strong>{{ t.product_name }}</strong></td>
+      <td>{{ kind_badge(t) }}</td>
+      <td class="num">{{ t.quantity }}</td>
+      <td class="muted">{{ t.note }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p style="padding:0 20px"><a href="{{ url_for('history') }}">Full history →</a></p>
+  {% else %}
+    <div class="empty">Nothing recorded yet.</div>
+  {% endif %}
+</section>
+{% endblock %}

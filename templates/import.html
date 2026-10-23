@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Import CSV{% endblock %}
+{% block content %}
+<h1>Import products from CSV</h1>
+<p class="subtitle">Add many products at once from a spreadsheet saved as CSV.</p>
+
+<form method="post" enctype="multipart/form-data" class="panel form">
+  <p style="margin:0">The CSV file must have this header row:</p>
+  <pre>name,category,price,quantity,reorder_level</pre>
+  <p class="muted" style="margin:0">Products that already exist (same name) or rows with errors are skipped and reported. A sample file, <code>sample_products.csv</code>, is included with the project.</p>
+  <input type="file" name="file" accept=".csv" required>
+  <div class="actions">
+    <button class="btn" type="submit">Import</button>
+    <a class="btn ghost" href="{{ url_for('products') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
