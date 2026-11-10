@@ -10,6 +10,9 @@ Built in Python 3 with Flask and SQLite for the *Programming with Python (BTCS21
 3. **Stock in / stock out**: record deliveries and sales; selling more than the available stock is blocked; every movement is saved in a history table.
 4. **Low-stock alerts**: products at or below their reorder level are highlighted and listed in a separate report.
 5. **CSV import / export**: back up the product list or load many products at once (`sample_products.csv` is included).
+6. **Analytics & Financial Reports**: track weekly, monthly, and all-time total stocks in (at buying rate) and stocks out (at selling rate), monitor net profit, total inventory investment, and visualize day-wise sales graphs.
+7. **Multi-Item Billing & Printable Invoices (Mini POS)**: fast point-of-sale checkout where multiple products are added to a cart, discounts & GST/taxes calculated, and printable invoices/receipts generated (`window.print()`).
+8. **Expiry Date & Batch Tracking**: track expiration dates of perishable goods with automated "Expired" and "Expiring Soon" countdown alerts to prevent losses from dead stock.
 
 ## Python concepts used
 

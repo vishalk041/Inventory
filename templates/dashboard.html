@@ -7,21 +7,76 @@
   <div class="stat">
     <div class="label">Total products</div>
     <div class="value">{{ summary.total_products }}</div>
-    <div class="hint">{{ summary.total_units }} units · ₹{{ "{:,.2f}".format(summary.total_value) }} value</div>
+    <div class="hint">{{ summary.total_units }} units · {{ summary.categories }} categories</div>
   </div>
   <div class="stat">
-    <div class="label">Low stock</div>
-    <div class="value orange">{{ summary.low_stock_count }}</div>
+    <div class="label">Total Investment</div>
+    <div class="value blue">₹{{ "{:,.0f}".format(summary.total_investment) }}</div>
+    <div class="hint">In-stock capital at buying rate</div>
   </div>
   <div class="stat">
-    <div class="label">Out of stock</div>
-    <div class="value red">{{ summary.out_of_stock_count }}</div>
+    <div class="label">Retail Value</div>
+    <div class="value" style="color:var(--green)">₹{{ "{:,.0f}".format(summary.total_value) }}</div>
+    <div class="hint">+₹{{ "{:,.0f}".format(summary.potential_profit) }} potential profit</div>
   </div>
   <div class="stat">
-    <div class="label">Categories</div>
-    <div class="value blue">{{ summary.categories }}</div>
+    <div class="label">Stock Alerts</div>
+    <div class="value {{ 'red' if summary.out_of_stock_count > 0 else 'orange' }}">
+      {{ summary.low_stock_count + summary.out_of_stock_count }}
+    </div>
+    <div class="hint">{{ summary.out_of_stock_count }} out of stock · {{ summary.low_stock_count }} low</div>
   </div>
 </section>
+
+<!-- Financial Highlights Banner -->
+<section class="panel" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-left: 4px solid var(--accent);">
+  <div>
+    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); font-weight: 700;">Weekly Performance Summary</div>
+    <div style="display: flex; gap: 24px; margin-top: 6px; flex-wrap: wrap; align-items: center;">
+      <div>
+        <span class="muted" style="font-size: 0.85rem;">Stock In:</span> 
+        <strong>₹{{ "{:,.2f}".format(analytics.stocks_in_amount) }}</strong> 
+        <small class="muted">({{ analytics.stocks_in_qty }} units)</small>
+      </div>
+      <div>
+        <span class="muted" style="font-size: 0.85rem;">Stock Out:</span> 
+        <strong style="color:var(--green);">₹{{ "{:,.2f}".format(analytics.stocks_out_amount) }}</strong> 
+        <small class="muted">({{ analytics.stocks_out_qty }} units)</small>
+      </div>
+      <div>
+        <span class="muted" style="font-size: 0.85rem;">Net Profit:</span> 
+        <strong style="color:var(--green);">+₹{{ "{:,.2f}".format(analytics.profit) }}</strong> 
+        <span class="badge ok" style="font-size:0.7rem; margin-left:4px;">{{ analytics.profit_margin }}% margin</span>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a class="btn ghost" href="{{ url_for('billing') }}">🧾 + New Bill</a>
+    <a class="btn" href="{{ url_for('analytics') }}">View Sales Graphs →</a>
+  </div>
+</section>
+
+<!-- Perishable Stock Expiry Alert (Only shows if expired or expiring soon items exist) -->
+{% if summary.expired_count > 0 or summary.expiring_soon_count > 0 %}
+<section class="panel" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; border-left: 4px solid var(--red); background: rgba(192, 38, 45, 0.05);">
+  <div style="display: flex; align-items: center; gap: 14px;">
+    <span style="font-size: 1.5rem;">⚠️</span>
+    <div>
+      <strong style="color: var(--red); font-size: 0.95rem;">Perishable Goods Alert:</strong>
+      <div class="muted" style="font-size: 0.85rem; margin-top: 2px;">
+        {% if summary.expired_count > 0 %}
+          <strong style="color:var(--red);">{{ summary.expired_count }} product(s) expired</strong>
+        {% endif %}
+        {% if summary.expired_count > 0 and summary.expiring_soon_count > 0 %} · {% endif %}
+        {% if summary.expiring_soon_count > 0 %}
+          <strong style="color:var(--orange);">{{ summary.expiring_soon_count }} product(s) expiring within 30 days</strong>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <a class="btn ghost" href="{{ url_for('expiry') }}" style="border-color: var(--red); color: var(--red);">Check Expiry Tracker →</a>
+</section>
+{% endif %}
 
 <div class="grid-2">
   <section class="panel">
@@ -69,7 +124,7 @@
   {% if recent %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Note</th></tr></thead>
+    <thead><tr><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Total</th><th>Note</th></tr></thead>
     <tbody>
     {% for t in recent %}
     <tr>
@@ -77,6 +132,7 @@
       <td><strong>{{ t.product_name }}</strong></td>
       <td>{{ kind_badge(t) }}</td>
       <td class="num">{{ t.quantity }}</td>
+      <td class="num" style="color:{{ 'var(--green)' if t.kind == 'OUT' else 'var(--orange)' }}">₹{{ "{:,.2f}".format(t.total_amount or 0) }}</td>
       <td class="muted">{{ t.note }}</td>
     </tr>
     {% endfor %}

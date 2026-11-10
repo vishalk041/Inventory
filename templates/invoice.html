@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Invoice #{{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+
+<!-- Action Bar (Hidden in Print) -->
+<div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <a href="{{ url_for('invoices') }}" class="btn ghost">← All Invoices</a>
+    <a href="{{ url_for('billing') }}" class="btn ghost">+ New Bill</a>
+  </div>
+  <div>
+    <button type="button" class="btn" onclick="window.print();" style="gap: 8px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px; height:18px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
+</div>
+
+<!-- Printable Invoice Card -->
+<div class="invoice-sheet" style="max-width: 680px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px; box-shadow: var(--shadow);">
+  
+  <!-- Header: Shop Details & Invoice Meta -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 24px;">
+    <div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--accent); letter-spacing: -0.02em;">{{ SHOP_NAME }}</div>
+      <div class="muted" style="font-size: 0.85rem; margin-top: 4px;">Small Shop Retail & Inventory</div>
+      <div class="muted" style="font-size: 0.85rem;">Managed by: <strong>{{ USER_NAME }}</strong></div>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--ink);">INVOICE</div>
+      <div style="font-family: monospace; font-size: 1.05rem; font-weight: 700; color: var(--blue); margin-top: 2px;">{{ invoice.invoice_no }}</div>
+      <div class="muted" style="font-size: 0.82rem; margin-top: 4px;">Date: {{ invoice.created_at }}</div>
+    </div>
+  </div>
+
+  <!-- Customer & Payment Details -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; background: var(--surface-2); padding: 16px; border-radius: 8px;">
+    <div>
+      <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--ink-faint); letter-spacing: 0.05em;">Billed To:</div>
+      <div style="font-size: 1rem; font-weight: 700; color: var(--ink); margin-top: 2px;">{{ invoice.customer_name }}</div>
+      {% if invoice.customer_phone %}
+      <div class="muted" style="font-size: 0.85rem;">Phone: {{ invoice.customer_phone }}</div>
+      {% endif %}
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--ink-faint); letter-spacing: 0.05em;">Payment Information:</div>
+      <div style="font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-top: 2px;">
+        Method: {{ invoice.payment_method }}
+      </div>
+      <div style="margin-top: 4px;">
+        <span class="badge ok" style="font-size: 0.75rem;">Status: PAID</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Itemized Items Table -->
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+        <th style="padding: 10px 8px; font-size: 0.75rem; text-transform: uppercase; color: var(--ink-soft); width: 40px;">#</th>
+        <th style="padding: 10px 8px; font-size: 0.75rem; text-transform: uppercase; color: var(--ink-soft);">Item Description</th>
+        <th style="padding: 10px 8px; font-size: 0.75rem; text-transform: uppercase; color: var(--ink-soft); text-align: right;">Rate</th>
+        <th style="padding: 10px 8px; font-size: 0.75rem; text-transform: uppercase; color: var(--ink-soft); text-align: center;">Qty</th>
+        <th style="padding: 10px 8px; font-size: 0.75rem; text-transform: uppercase; color: var(--ink-soft); text-align: right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice['items'] %}
+      <tr style="border-bottom: 1px solid var(--border);">
+        <td style="padding: 12px 8px; font-size: 0.85rem; color: var(--ink-faint);">{{ loop.index }}</td>
+        <td style="padding: 12px 8px; font-size: 0.95rem; font-weight: 600;">{{ item.product_name }}</td>
+        <td style="padding: 12px 8px; font-size: 0.9rem; text-align: right;">₹{{ "%.2f"|format(item.unit_price) }}</td>
+        <td style="padding: 12px 8px; font-size: 0.9rem; text-align: center; font-weight: 600;">{{ item.quantity }}</td>
+        <td style="padding: 12px 8px; font-size: 0.95rem; text-align: right; font-weight: 700;">₹{{ "%.2f"|format(item.total_price) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Calculation Summary Breakdown -->
+  <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+    <div style="width: 260px; font-size: 0.9rem;">
+      <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+        <span class="muted">Subtotal ({{ invoice.item_count }} units):</span>
+        <strong>₹{{ "%.2f"|format(invoice.subtotal) }}</strong>
+      </div>
+      {% if invoice.discount > 0 %}
+      <div style="display: flex; justify-content: space-between; padding: 6px 0; color: var(--red);">
+        <span>Discount:</span>
+        <strong>-₹{{ "%.2f"|format(invoice.discount) }}</strong>
+      </div>
+      {% endif %}
+      {% if invoice.tax > 0 %}
+      <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+        <span class="muted">Tax / GST:</span>
+        <strong>+₹{{ "%.2f"|format(invoice.tax) }}</strong>
+      </div>
+      {% endif %}
+      <div style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid var(--ink); margin-top: 6px; font-size: 1.15rem;">
+        <span style="font-weight: 800;">Total Paid:</span>
+        <strong style="color: var(--green); font-weight: 800;">₹{{ "%.2f"|format(invoice.total_amount) }}</strong>
+      </div>
+    </div>
+  </div>
+
+  {% if invoice.note %}
+  <div style="font-size: 0.85rem; padding: 10px 14px; background: var(--surface-2); border-radius: 6px; margin-bottom: 24px;">
+    <strong>Note:</strong> <span class="muted">{{ invoice.note }}</span>
+  </div>
+  {% endif %}
+
+  <!-- Footer Notice -->
+  <div style="text-align: center; border-top: 1px dashed var(--border); padding-top: 20px; font-size: 0.85rem;" class="muted">
+    <p style="margin: 0 0 4px; font-weight: 600; color: var(--ink);">Thank you for shopping with {{ SHOP_NAME }}!</p>
+    <p style="margin: 0; font-size: 0.78rem;">For queries or exchanges, please retain this bill.</p>
+  </div>
+</div>
+
+<!-- Print Stylesheet -->
+<style>
+@media print {
+  /* Hide UI navigation, buttons, topbars and footer */
+  .sidebar, .topbar, .footer, .no-print {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+  }
+  .content {
+    padding: 0 !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .invoice-sheet {
+    max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 20px !important;
+  }
+}
+</style>
+
+{% endblock %}

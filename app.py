@@ -6,8 +6,9 @@ Run with:   python app.py
 Then open:  http://127.0.0.1:5001
 """
 
+import json
 from flask import (
-    Flask, Response, flash, redirect, render_template, request, url_for,
+    Flask, Response, flash, redirect, render_template, request, url_for, jsonify,
 )
 
 from inventory import InventoryError, InventoryManager
@@ -30,13 +31,15 @@ def matches_status(product, status):
 
 
 # ---------------------------------------------------------------------------
-# Feature 1: Dashboard (summary numbers, low-stock alerts, recent activity)
+# Feature 1: Dashboard (summary numbers, financial highlights, expiry alerts)
 # ---------------------------------------------------------------------------
 @app.route("/")
 def dashboard():
     return render_template(
         "dashboard.html",
         summary=manager.summary(),
+        analytics=manager.get_analytics_summary(period="weekly"),
+        expiry=manager.get_expiry_report(),
         low_stock=manager.low_stock_products(),
         recent=manager.list_transactions(limit=8),
         by_category=manager.stock_by_category(),
@@ -76,6 +79,8 @@ def add_product():
                 request.form.get("price"),
                 request.form.get("quantity"),
                 request.form.get("reorder_level"),
+                cost_price=request.form.get("cost_price"),
+                expiry_date=request.form.get("expiry_date"),
             )
             flash("Product added successfully.", "success")
             return redirect(url_for("products"))
@@ -102,6 +107,8 @@ def edit_product(product_id):
                 request.form.get("category"),
                 request.form.get("price"),
                 request.form.get("reorder_level"),
+                cost_price=request.form.get("cost_price"),
+                expiry_date=request.form.get("expiry_date"),
             )
             flash("Product updated.", "success")
             return redirect(url_for("products"))
@@ -134,6 +141,7 @@ def stock():
                 request.form.get("kind"),
                 request.form.get("quantity"),
                 request.form.get("note", ""),
+                unit_price=request.form.get("unit_price"),
             )
             flash("Stock updated.", "success")
             return redirect(url_for("stock"))
@@ -161,11 +169,31 @@ def history():
 
 
 # ---------------------------------------------------------------------------
-# Feature 4: Low-stock report
+# Feature 4: Low-stock report & Expiry tracking
 # ---------------------------------------------------------------------------
 @app.route("/low-stock")
 def low_stock():
     return render_template("low_stock.html", items=manager.low_stock_products())
+
+
+@app.route("/expiry")
+def expiry():
+    report = manager.get_expiry_report()
+    return render_template("expiry.html", report=report)
+
+
+@app.route("/products/<int:product_id>/discard", methods=["POST"])
+def discard_product(product_id):
+    try:
+        quantity = request.form.get("quantity")
+        reason = request.form.get("reason", "EXPIRED").strip() or "EXPIRED"
+        note = request.form.get("note", "").strip()
+        prod = manager.get_product(product_id)
+        loss = manager.discard_product(product_id, quantity, reason=reason, note=note)
+        flash(f"Discarded {quantity} unit(s) of '{prod['name']}'. Recorded ₹{loss:,.2f} as loss from expired products.", "success")
+    except InventoryError as err:
+        flash(str(err), "error")
+    return redirect(url_for("expiry"))
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +227,91 @@ def import_csv():
             except InventoryError as err:
                 flash(str(err), "error")
     return render_template("import.html")
+
+
+# ---------------------------------------------------------------------------
+# Feature 6: Analytics & Financial Reports
+# ---------------------------------------------------------------------------
+@app.route("/analytics")
+def analytics():
+    period = request.args.get("period", "weekly").strip()
+    if period not in ("weekly", "monthly", "all"):
+        period = "weekly"
+    days = request.args.get("days", 14, type=int)
+    if days not in (7, 14, 30):
+        days = 14
+
+    summary = manager.get_analytics_summary(period=period)
+    daily_sales = manager.get_day_wise_sales(days=days)
+    top_products = manager.get_top_products_performance(period=period, limit=6)
+
+    return render_template(
+        "analytics.html",
+        summary=summary,
+        daily_sales=daily_sales,
+        top_products=top_products,
+        period=period,
+        days=days,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Feature 7: Multi-Item Billing & Printable Invoices (Mini POS)
+# ---------------------------------------------------------------------------
+@app.route("/billing", methods=["GET", "POST"])
+def billing():
+    if request.method == "POST":
+        try:
+            # Items JSON list passed from the billing screen cart
+            raw_items = request.form.get("items_json")
+            if not raw_items:
+                flash("No items in the bill.", "error")
+                return redirect(url_for("billing"))
+
+            items = json.loads(raw_items)
+            customer_name = request.form.get("customer_name")
+            customer_phone = request.form.get("customer_phone")
+            discount = request.form.get("discount", 0)
+            tax_percent = request.form.get("tax_percent", 0)
+            payment_method = request.form.get("payment_method", "Cash")
+            note = request.form.get("note", "")
+
+            invoice_id = manager.create_invoice(
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                items=items,
+                discount=discount,
+                tax_percent=tax_percent,
+                payment_method=payment_method,
+                note=note,
+            )
+            flash("Invoice generated successfully!", "success")
+            return redirect(url_for("view_invoice", invoice_id=invoice_id))
+        except InventoryError as err:
+            flash(str(err), "error")
+        except Exception as err:
+            flash(f"Unexpected error: {err}", "error")
+
+    # In-stock products available for billing
+    products = [p for p in manager.list_products() if p["quantity"] > 0]
+    return render_template("billing.html", products=products)
+
+
+@app.route("/invoices")
+def invoices():
+    search = request.args.get("search", "").strip()
+    invoice_list = manager.list_invoices(search=search)
+    return render_template("invoices.html", invoices=invoice_list, search=search)
+
+
+@app.route("/invoice/<int:invoice_id>")
+def view_invoice(invoice_id):
+    try:
+        invoice = manager.get_invoice(invoice_id)
+        return render_template("invoice.html", invoice=invoice)
+    except InventoryError as err:
+        flash(str(err), "error")
+        return redirect(url_for("invoices"))
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 {% block title %}History{% endblock %}
 {% block content %}
 <h1>Transaction history</h1>
-<p class="subtitle">Every stock movement, newest first.</p>
+<p class="subtitle">Complete audit trail of deliveries (stocks in at buying rate) and sales (stocks out at selling rate).</p>
 
 <form class="toolbar" method="get">
   <select name="product_id" onchange="this.form.submit()">
@@ -13,21 +13,33 @@
     {% endfor %}
   </select>
   <button class="btn ghost" type="submit">Filter</button>
+  {% if selected %}<a href="{{ url_for('history') }}">Clear filter</a>{% endif %}
 </form>
 
 <section class="panel flush">
   {% if transactions %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>#</th><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Note</th></tr></thead>
+    <thead><tr><th>#</th><th>When</th><th>Product</th><th>Type</th><th>Qty</th><th>Rate</th><th>Total</th><th>Profit</th><th>Note</th></tr></thead>
     <tbody>
     {% for t in transactions %}
     <tr>
-      <td class="sku">{{ t.id }}</td>
+      <td class="sku">#{{ t.id }}</td>
       <td class="muted">{{ t.created_at }}</td>
       <td><strong>{{ t.product_name }}</strong></td>
       <td>{{ kind_badge(t) }}</td>
       <td class="num">{{ t.quantity }}</td>
+      <td class="num">₹{{ "%.2f"|format(t.unit_price or 0) }}</td>
+      <td class="num" style="color:{{ 'var(--green)' if t.kind == 'OUT' else 'var(--orange)' }}">₹{{ "{:,.2f}".format(t.total_amount or 0) }}</td>
+      <td>
+        {% if t.kind == 'OUT' %}
+          <span class="badge {{ 'ok' if t.profit >= 0 else 'danger' }}">
+            {{ '+' if t.profit > 0 }}₹{{ "{:,.2f}".format(t.profit) }}
+          </span>
+        {% else %}
+          <span class="muted" style="font-size:0.8rem;">—</span>
+        {% endif %}
+      </td>
       <td class="muted">{{ t.note }}</td>
     </tr>
     {% endfor %}

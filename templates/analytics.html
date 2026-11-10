@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+{% from "macros.html" import product_tile %}
+{% block title %}Analytics & Financial Reports{% endblock %}
+{% block content %}
+
+<!-- Header & Period Switcher -->
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1>Analytics & Financial Reports</h1>
+    <p class="subtitle" style="margin-bottom: 0;">Track stock-in (buying rate), sales (selling rate), loss from expired products, net profit, and daily trends.</p>
+  </div>
+
+  <!-- Period Tabs -->
+  <div class="period-tabs" style="display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; box-shadow: var(--shadow);">
+    <a href="{{ url_for('analytics', period='weekly', days=days) }}" 
+       class="tab-btn {{ 'active' if period == 'weekly' }}" 
+       style="padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: {{ 'var(--accent)' if period == 'weekly' else 'var(--ink-soft)' }}; background: {{ 'var(--hover)' if period == 'weekly' else 'transparent' }}; text-decoration: none;">
+      📅 Weekly (Last 7 Days)
+    </a>
+    <a href="{{ url_for('analytics', period='monthly', days=days) }}" 
+       class="tab-btn {{ 'active' if period == 'monthly' }}" 
+       style="padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: {{ 'var(--accent)' if period == 'monthly' else 'var(--ink-soft)' }}; background: {{ 'var(--hover)' if period == 'monthly' else 'transparent' }}; text-decoration: none;">
+      🗓️ Monthly (Last 30 Days)
+    </a>
+    <a href="{{ url_for('analytics', period='all', days=days) }}" 
+       class="tab-btn {{ 'active' if period == 'all' }}" 
+       style="padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; color: {{ 'var(--accent)' if period == 'all' else 'var(--ink-soft)' }}; background: {{ 'var(--hover)' if period == 'all' else 'transparent' }}; text-decoration: none;">
+      🌐 All Time
+    </a>
+  </div>
+</div>
+
+<!-- 5 Key Financial Metric Cards -->
+<section class="stats" style="margin-bottom: 24px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
+  <!-- Card 1: Stocks In (Purchases @ Buying Rate) -->
+  <div class="stat" style="border-top: 4px solid var(--orange);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Stocks In (Purchases)</div>
+      <span style="font-size: 1.2rem;">📦</span>
+    </div>
+    <div class="value orange">₹{{ "{:,.2f}".format(summary.stocks_in_amount) }}</div>
+    <div class="hint" style="margin-top: 4px;">
+      <strong>{{ summary.stocks_in_qty }} units</strong> bought at buying rate
+    </div>
+    <div class="hint" style="font-size: 0.75rem; margin-top: 2px; color: var(--ink-faint);">
+      Total purchase expense ({{ summary.period_label }})
+    </div>
+  </div>
+
+  <!-- Card 2: Stocks Out (Sales @ Selling Rate) -->
+  <div class="stat" style="border-top: 4px solid var(--green);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Stocks Out (Sales)</div>
+      <span style="font-size: 1.2rem;">💰</span>
+    </div>
+    <div class="value" style="color: var(--green);">₹{{ "{:,.2f}".format(summary.stocks_out_amount) }}</div>
+    <div class="hint" style="margin-top: 4px;">
+      <strong>{{ summary.stocks_out_qty }} units</strong> sold at selling rate
+    </div>
+    <div class="hint" style="font-size: 0.75rem; margin-top: 2px; color: var(--ink-faint);">
+      Gross customer revenue ({{ summary.period_label }})
+    </div>
+  </div>
+
+  <!-- Card 3: Loss from Expired Products -->
+  <div class="stat" style="border-top: 4px solid var(--red);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label" style="color: var(--red);">Loss from Expired Products</div>
+      <span style="font-size: 1.2rem;">🗑️</span>
+    </div>
+    <div class="value red">₹{{ "{:,.2f}".format(summary.expired_loss_amount) }}</div>
+    <div class="hint" style="margin-top: 4px;">
+      <strong>{{ summary.expired_loss_qty }} units</strong> written off at cost price
+    </div>
+    <div class="hint" style="font-size: 0.75rem; margin-top: 2px; color: var(--ink-faint);">
+      Unrecovered capital loss ({{ summary.period_label }})
+    </div>
+  </div>
+
+  <!-- Card 4: Net Realized Profit -->
+  <div class="stat" style="border-top: 4px solid {{ 'var(--green)' if summary.net_profit >= 0 else 'var(--red)' }};">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Net Realized Profit</div>
+      <span style="font-size: 1.2rem;">📈</span>
+    </div>
+    <div class="value" style="color: {{ 'var(--green)' if summary.net_profit >= 0 else 'var(--red)' }};">
+      {{ '+' if summary.net_profit > 0 }}₹{{ "{:,.2f}".format(summary.net_profit) }}
+    </div>
+    <div class="hint" style="margin-top: 4px; display:flex; align-items:center; gap:6px;">
+      <span class="badge {{ 'ok' if summary.profit_margin >= 10 else ('warn' if summary.profit_margin > 0 else 'danger') }}">
+        {{ summary.profit_margin }}% net margin
+      </span>
+    </div>
+    <div class="hint" style="font-size: 0.75rem; margin-top: 2px; color: var(--ink-faint);">
+      Gross Profit (₹{{ "{:,.0f}".format(summary.gross_profit) }}) − Expiry Loss (₹{{ "{:,.0f}".format(summary.expired_loss_amount) }})
+    </div>
+  </div>
+
+  <!-- Card 5: Total Investment -->
+  <div class="stat" style="border-top: 4px solid var(--blue);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Total Investment</div>
+      <span style="font-size: 1.2rem;">🏦</span>
+    </div>
+    <div class="value blue">₹{{ "{:,.2f}".format(summary.current_inventory_investment) }}</div>
+    <div class="hint" style="margin-top: 4px;">
+      <strong>{{ summary.current_units }} units</strong> in stock at buying rate
+    </div>
+    <div class="hint" style="font-size: 0.75rem; margin-top: 2px; color: var(--ink-faint);">
+      Retail stock value: ₹{{ "{:,.0f}".format(summary.current_inventory_value) }}
+    </div>
+  </div>
+</section>
+
+<!-- Day-Wise Sales Graphs Panel -->
+<section class="panel" style="margin-bottom: 24px;">
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 14px;">
+    <div>
+      <h2 style="margin: 0; font-size: 1.15rem;">📊 Day-Wise Sales, Losses & Financial Trend</h2>
+      <span class="muted" style="font-size: 0.85rem;">Daily comparison of Sales (Stock Out), Purchases (Stock In), and Loss from Expired Products</span>
+    </div>
+
+    <!-- Graph Range Switcher -->
+    <div style="display: inline-flex; gap: 6px;">
+      <a href="{{ url_for('analytics', period=period, days=7) }}" 
+         class="btn ghost" 
+         style="padding: 6px 12px; font-size: 0.8rem; {{ 'border-color: var(--accent); color: var(--accent); font-weight:700;' if days == 7 }}">
+        7 Days
+      </a>
+      <a href="{{ url_for('analytics', period=period, days=14) }}" 
+         class="btn ghost" 
+         style="padding: 6px 12px; font-size: 0.8rem; {{ 'border-color: var(--accent); color: var(--accent); font-weight:700;' if days == 14 }}">
+        14 Days
+      </a>
+      <a href="{{ url_for('analytics', period=period, days=30) }}" 
+         class="btn ghost" 
+         style="padding: 6px 12px; font-size: 0.8rem; {{ 'border-color: var(--accent); color: var(--accent); font-weight:700;' if days == 30 }}">
+        30 Days
+      </a>
+    </div>
+  </div>
+
+  <!-- Graph Summary Badges with Distinct Expiry Loss Indicator -->
+  <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#10b981;"></span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">Sales (Stock Out):</span>
+      <strong style="color: var(--green);">₹{{ "{:,.2f}".format(daily_sales.total_chart_sales) }}</strong>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f59e0b;"></span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">Purchases (Stock In):</span>
+      <strong style="color: var(--orange);">₹{{ "{:,.2f}".format(daily_sales.total_chart_purchases) }}</strong>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#ef4444;"></span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">Loss from Expired Products:</span>
+      <strong style="color: var(--red);">₹{{ "{:,.2f}".format(daily_sales.total_chart_losses) }}</strong>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#3b82f6;"></span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">Net Realized Profit:</span>
+      <strong style="color: var(--blue);">₹{{ "{:,.2f}".format(daily_sales.total_chart_profit) }}</strong>
+    </div>
+  </div>
+
+  <!-- Chart.js Canvas -->
+  <div style="position: relative; width: 100%; min-height: 320px; max-height: 420px;">
+    <canvas id="salesChart"></canvas>
+  </div>
+
+  <!-- Volume Units Chart Toggle / Secondary Chart -->
+  <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border);">
+    <h3 style="font-size: 0.95rem; margin: 0 0 12px; color: var(--ink-soft);">📦 Daily Units Movement (Sold vs Restocked)</h3>
+    <div style="position: relative; width: 100%; height: 180px;">
+      <canvas id="unitsChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Day-Wise Breakdown Table & Top Products Row -->
+<div class="grid-2" style="margin-bottom: 24px;">
+  <!-- Day-Wise Breakdown Table -->
+  <section class="panel flush">
+    <div style="padding: 18px 20px 14px; border-bottom: 1px solid var(--border);">
+      <h2 style="margin: 0; font-size: 1.05rem;">📅 Day-Wise Breakdown</h2>
+      <div class="muted" style="font-size: 0.8rem;">Daily sales, inventory write-offs, and net earnings</div>
+    </div>
+    {% if daily_sales.active_days %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Stock In (Buy)</th>
+            <th>Stock Out (Sell)</th>
+            <th>Expiry Loss</th>
+            <th>Net Profit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in daily_sales.active_days %}
+          <tr>
+            <td>
+              <strong>{{ row.label_full }}</strong>
+              <div class="sku" style="font-size:0.75rem;">{{ row.date }}</div>
+            </td>
+            <td>
+              <div>₹{{ "{:,.2f}".format(row.in_amount) }}</div>
+              <small class="muted" style="font-size:0.75rem;">{{ row.in_qty }} units</small>
+            </td>
+            <td>
+              <div style="font-weight:700; color:var(--green);">₹{{ "{:,.2f}".format(row.out_amount) }}</div>
+              <small class="muted" style="font-size:0.75rem;">{{ row.out_qty }} units</small>
+            </td>
+            <td>
+              {% if row.loss_amount > 0 %}
+                <strong style="color:var(--red);">-₹{{ "{:,.2f}".format(row.loss_amount) }}</strong>
+                <div class="sku" style="font-size:0.75rem; color:var(--red);">{{ row.loss_qty }} expired</div>
+              {% else %}
+                <span class="muted" style="font-size:0.8rem;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <strong style="color: {{ 'var(--green)' if row.profit >= 0 else 'var(--red)' }};">
+                {{ '+' if row.profit > 0 }}₹{{ "{:,.2f}".format(row.profit) }}
+              </strong>
+              <div>
+                <span class="badge {{ 'ok' if row.profit_margin >= 15 else ('warn' if row.profit_margin > 0 else 'danger') }}" style="font-size:0.7rem;">
+                  {{ row.profit_margin }}%
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">No sales or purchase movements recorded in this timeframe.</div>
+    {% endif %}
+  </section>
+
+  <!-- Top Performing Products -->
+  <section class="panel flush">
+    <div style="padding: 18px 20px 14px; border-bottom: 1px solid var(--border);">
+      <h2 style="margin: 0; font-size: 1.05rem;">🏆 Top Products by Sales & Profit</h2>
+      <div class="muted" style="font-size: 0.8rem;">Highest contributing items in {{ summary.period_label }}</div>
+    </div>
+    {% if top_products %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Sold</th>
+            <th>Revenue</th>
+            <th>Profit</th>
+            <th>Margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in top_products %}
+          <tr>
+            <td>
+              <div class="product-cell">
+                {{ product_tile(p.category) }}
+                <div>
+                  <strong>{{ p.name }}</strong>
+                  <div class="sku" style="font-size:0.75rem;">{{ p.category }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="num">{{ p.units_sold }}</td>
+            <td class="num" style="color:var(--green);">₹{{ "{:,.2f}".format(p.revenue) }}</td>
+            <td class="num" style="color:var(--blue);">+₹{{ "{:,.2f}".format(p.profit) }}</td>
+            <td>
+              <span class="badge {{ 'ok' if p.margin >= 15 else 'warn' }}">{{ p.margin }}%</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">No sales recorded for this period yet. Record sales under <a href="{{ url_for('stock') }}">Stock In/Out</a> or <a href="{{ url_for('billing') }}">Billing (POS)</a>.</div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- All-Time Store Totals Summary Banner -->
+<section class="panel" style="background: var(--surface-2); border: 1px dashed var(--border); display: flex; flex-wrap: wrap; justify-content: space-around; gap: 20px; text-align: center; padding: 20px;">
+  <div>
+    <div class="muted" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">All-Time Purchases</div>
+    <div style="font-size: 1.35rem; font-weight: 700; color: var(--orange); margin-top: 4px;">₹{{ "{:,.2f}".format(summary.all_time_in_amount) }}</div>
+    <div class="muted" style="font-size: 0.75rem;">Total money spent stocking products</div>
+  </div>
+  <div style="border-left: 1px solid var(--border);"></div>
+  <div>
+    <div class="muted" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">All-Time Sales Revenue</div>
+    <div style="font-size: 1.35rem; font-weight: 700; color: var(--green); margin-top: 4px;">₹{{ "{:,.2f}".format(summary.all_time_out_amount) }}</div>
+    <div class="muted" style="font-size: 0.75rem;">Total money received from customers</div>
+  </div>
+  <div style="border-left: 1px solid var(--border);"></div>
+  <div>
+    <div class="muted" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">All-Time Expiry Loss</div>
+    <div style="font-size: 1.35rem; font-weight: 700; color: var(--red); margin-top: 4px;">-₹{{ "{:,.2f}".format(summary.all_time_loss_amount) }}</div>
+    <div class="muted" style="font-size: 0.75rem;">Total written-off expired/spoiled goods</div>
+  </div>
+  <div style="border-left: 1px solid var(--border);"></div>
+  <div>
+    <div class="muted" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">All-Time Net Profit</div>
+    <div style="font-size: 1.35rem; font-weight: 700; color: var(--blue); margin-top: 4px;">+₹{{ "{:,.2f}".format(summary.all_time_profit) }}</div>
+    <div class="muted" style="font-size: 0.75rem;">Total earnings after product costs & losses</div>
+  </div>
+</section>
+
+<!-- Chart.js Library from CDN with graceful fallback -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  (function () {
+    var labels = {{ daily_sales.chart_data.labels | tojson }};
+    var sales = {{ daily_sales.chart_data.sales | tojson }};
+    var purchases = {{ daily_sales.chart_data.purchases | tojson }};
+    var losses = {{ daily_sales.chart_data.losses | tojson }};
+    var profits = {{ daily_sales.chart_data.profits | tojson }};
+    var salesUnits = {{ daily_sales.chart_data.sales_units | tojson }};
+    var purchaseUnits = {{ daily_sales.chart_data.purchase_units | tojson }};
+
+    // Dark mode check for chart styling
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    var gridColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+    var textColor = isDark ? "#a3aec4" : "#5b6578";
+
+    function inr(val) {
+      return "₹" + Number(val).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    if (typeof Chart !== "undefined") {
+      // 1. Financial Trend Chart with Distinct "Loss from Expired Products" Bar
+      var ctx = document.getElementById("salesChart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Sales (Stock Out)",
+              data: sales,
+              backgroundColor: "rgba(16, 185, 129, 0.75)",
+              borderColor: "#10b981",
+              borderWidth: 1.5,
+              borderRadius: 6,
+              order: 2,
+            },
+            {
+              label: "Purchases (Stock In)",
+              data: purchases,
+              backgroundColor: "rgba(245, 158, 11, 0.75)",
+              borderColor: "#f59e0b",
+              borderWidth: 1.5,
+              borderRadius: 6,
+              order: 3,
+            },
+            {
+              label: "Loss from Expired Products",
+              data: losses,
+              backgroundColor: "rgba(239, 68, 68, 0.8)",
+              borderColor: "#ef4444",
+              borderWidth: 1.5,
+              borderRadius: 6,
+              order: 4,
+            },
+            {
+              label: "Net Realized Profit",
+              data: profits,
+              type: "line",
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59, 130, 246, 0.15)",
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              fill: true,
+              order: 1,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false,
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: textColor,
+                font: { family: "'DM Sans', sans-serif", weight: '600' },
+                usePointStyle: true,
+                padding: 16
+              }
+            },
+            tooltip: {
+              backgroundColor: isDark ? "#17203a" : "#111c33",
+              titleColor: "#fff",
+              bodyColor: "#e6ebf5",
+              borderColor: isDark ? "#27324d" : "#3b4866",
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  return " " + context.dataset.label + ": " + inr(context.parsed.y);
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: textColor, font: { family: "'DM Sans', sans-serif" } }
+            },
+            y: {
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { family: "'DM Sans', sans-serif" },
+                callback: function(value) {
+                  if (value >= 1000) return "₹" + (value / 1000).toFixed(1) + "k";
+                  return "₹" + value;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Units Movement Chart
+      var ctxUnits = document.getElementById("unitsChart").getContext("2d");
+      new Chart(ctxUnits, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Units Sold (Stock Out)",
+              data: salesUnits,
+              backgroundColor: "rgba(16, 185, 129, 0.8)",
+              borderRadius: 4,
+            },
+            {
+              label: "Units Restocked (Stock In)",
+              data: purchaseUnits,
+              backgroundColor: "rgba(245, 158, 11, 0.8)",
+              borderRadius: 4,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+              labels: { color: textColor, boxWidth: 12, font: { size: 11, family: "'DM Sans', sans-serif" } }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) { return " " + ctx.dataset.label + ": " + ctx.parsed.y + " units"; }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+            y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+          }
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

@@ -35,16 +35,41 @@
   <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Price</th><th>Status</th><th></th></tr>
+      <tr>
+        <th>Product</th>
+        <th>SKU</th>
+        <th>Category</th>
+        <th>Stock</th>
+        <th>Buying Rate</th>
+        <th>Selling Rate</th>
+        <th>Margin</th>
+        <th>Expiry</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
     </thead>
     <tbody>
     {% for p in products %}
+    {% set margin = ((p.price - (p.cost_price or 0)) / p.price * 100) if p.price > 0 else 0 %}
     <tr>
       <td><div class="product-cell">{{ product_tile(p.category) }}{{ p.name }}</div></td>
       <td class="sku">{{ sku(p) }}</td>
       <td>{{ p.category }}</td>
       <td><span class="num {{ 'red' if p.quantity == 0 else ('orange' if p.quantity <= p.reorder_level) }}">{{ p.quantity }}</span></td>
-      <td class="num">₹{{ "%.2f"|format(p.price) }}</td>
+      <td class="num">₹{{ "%.2f"|format(p.cost_price or 0) }}</td>
+      <td class="num" style="color:var(--ink);">₹{{ "%.2f"|format(p.price) }}</td>
+      <td>
+        <span class="badge {{ 'ok' if margin > 15 else ('warn' if margin > 0 else 'danger') }}" style="font-size:0.75rem;">
+          {{ "%.1f"|format(margin) }}%
+        </span>
+      </td>
+      <td>
+        {% if p.expiry_date %}
+          <span class="sku" style="font-size:0.8rem; font-weight:600;">{{ p.expiry_date }}</span>
+        {% else %}
+          <span class="muted" style="font-size:0.8rem;">—</span>
+        {% endif %}
+      </td>
       <td>{{ status_badge(p) }}</td>
       <td>
         <div class="row-actions">

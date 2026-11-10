@@ -11,9 +11,22 @@
   <label>Category
     <input type="text" name="category" placeholder="e.g. Grocery, Stationery" value="{{ product.get('category', '') }}">
   </label>
-  <label>Price (₹)
-    <input type="number" name="price" step="0.01" min="0" required value="{{ product.get('price', '') }}">
-  </label>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+    <label>Buying Rate / Cost Price (₹)
+      <input type="number" id="cost_price" name="cost_price" step="0.01" min="0" required placeholder="What you pay per unit" value="{{ product.get('cost_price', '') }}">
+      <small class="hint" style="color:var(--ink-faint); font-weight:normal; font-size:0.75rem;">Wholesale / purchase price</small>
+    </label>
+    <label>Selling Rate / Retail Price (₹)
+      <input type="number" id="price" name="price" step="0.01" min="0" required placeholder="What you charge per unit" value="{{ product.get('price', '') }}">
+      <small class="hint" style="color:var(--ink-faint); font-weight:normal; font-size:0.75rem;">Customer sale price (MRP)</small>
+    </label>
+  </div>
+
+  <div id="margin-calc" style="padding:10px 14px; background:var(--surface-2); border-radius:8px; border:1px solid var(--border); font-size:0.85rem; color:var(--ink-soft);">
+    Expected profit per unit: <strong id="unit-profit" style="color:var(--green);">₹0.00</strong> (<span id="unit-margin">0%</span> margin)
+  </div>
+
   {% if not editing %}
   <label>Opening quantity
     <input type="number" name="quantity" min="0" required value="{{ product.get('quantity', 0) }}">
@@ -24,9 +37,30 @@
   <label>Reorder level (alert when stock falls to this number)
     <input type="number" name="reorder_level" min="0" required value="{{ product.get('reorder_level', 5) }}">
   </label>
+
+  <label>Expiry Date (optional for perishable products)
+    <input type="date" name="expiry_date" value="{{ product.get('expiry_date', '') }}">
+    <small class="hint" style="color:var(--ink-faint); font-weight:normal; font-size:0.75rem;">Leave empty for non-perishable goods (e.g. stationery, hardware)</small>
+  </label>
   <div class="actions">
     <button class="btn" type="submit">Save</button>
     <a class="btn ghost" href="{{ url_for('products') }}">Cancel</a>
   </div>
 </form>
+
+<script>
+  function updateMargin() {
+    var cp = parseFloat(document.getElementById("cost_price").value) || 0;
+    var sp = parseFloat(document.getElementById("price").value) || 0;
+    var profit = sp - cp;
+    var margin = sp > 0 ? ((profit / sp) * 100).toFixed(1) : "0.0";
+    var profitElem = document.getElementById("unit-profit");
+    profitElem.textContent = "₹" + profit.toFixed(2);
+    profitElem.style.color = profit >= 0 ? "var(--green)" : "var(--red)";
+    document.getElementById("unit-margin").textContent = margin + "%";
+  }
+  document.getElementById("cost_price").addEventListener("input", updateMargin);
+  document.getElementById("price").addEventListener("input", updateMargin);
+  updateMargin();
+</script>
 {% endblock %}
