@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% from "macros.html" import product_tile %}
+{% block title %}Expiry Date Tracker{% endblock %}
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+  <div>
+    <h1>Expiry Date & Batch Tracker</h1>
+    <p class="subtitle" style="margin-bottom: 0;">Monitor perishable products, prevent losses from dead stock, and write off expired goods with automatic loss tracking.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('products') }}" class="btn ghost">Manage Products</a>
+  </div>
+</div>
+
+<!-- 4 Top Summary Alert Cards -->
+<section class="stats" style="margin-bottom: 24px;">
+  <div class="stat" style="border-top: 4px solid var(--red);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Expired Products</div>
+      <span style="font-size: 1.2rem;">⚠️</span>
+    </div>
+    <div class="value red">{{ report.expired_count }}</div>
+    <div class="hint">Items past expiry date with unsold stock</div>
+  </div>
+
+  <div class="stat" style="border-top: 4px solid var(--orange);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Expiring Soon (30 Days)</div>
+      <span style="font-size: 1.2rem;">⏳</span>
+    </div>
+    <div class="value orange">{{ report.expiring_soon_count }}</div>
+    <div class="hint">Recommended for discounts or clearance</div>
+  </div>
+
+  <div class="stat" style="border-top: 4px solid var(--red);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Total Expiry Losses</div>
+      <span style="font-size: 1.2rem;">📉</span>
+    </div>
+    <div class="value red">₹{{ "{:,.2f}".format(report.total_expired_loss) }}</div>
+    <div class="hint">Cumulative capital written off from expired stock</div>
+  </div>
+
+  <div class="stat" style="border-top: 4px solid var(--green);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label">Fresh & Safe Stock</div>
+      <span style="font-size: 1.2rem;">✅</span>
+    </div>
+    <div class="value" style="color:var(--green)">{{ report.safe|length }}</div>
+    <div class="hint">Shelf life over 30 days remaining</div>
+  </div>
+</section>
+
+<!-- Expiry Table -->
+<section class="panel flush">
+  <div style="padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <h2 style="margin: 0; font-size: 1.05rem;">Perishable Inventory Status</h2>
+      <span class="muted" style="font-size: 0.8rem;">Click "Discard & Record Loss" to remove expired units and record them in the loss reports.</span>
+    </div>
+  </div>
+
+  {% if report.all_items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th>Units in Stock</th>
+          <th>Cost Value at Risk</th>
+          <th>Expiry Date</th>
+          <th>Status / Countdown</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in report.all_items %}
+        {% set risk_val = p.quantity * (p.cost_price or 0) %}
+        <tr style="{{ 'background: rgba(192, 38, 45, 0.05);' if p.status == 'expired' else ('background: rgba(245, 158, 11, 0.05);' if p.status == 'expiring_soon' else '') }}">
+          <td>
+            <div class="product-cell">
+              {{ product_tile(p.category) }}
+              <strong>{{ p.name }}</strong>
+            </div>
+          </td>
+          <td>{{ p.category }}</td>
+          <td>
+            <span class="num {{ 'red' if p.status == 'expired' else ('orange' if p.status == 'expiring_soon' else '') }}">
+              {{ p.quantity }}
+            </span>
+          </td>
+          <td class="num">₹{{ "{:,.2f}".format(risk_val) }}</td>
+          <td>
+            <strong style="font-family: monospace; font-size: 0.95rem;">{{ p.expiry_date }}</strong>
+          </td>
+          <td>
+            {% if p.status == 'expired' %}
+              <span class="badge danger">⚠️ {{ p.status_label }}</span>
+            {% elif p.status == 'expiring_soon' %}
+              <span class="badge warn">⏳ {{ p.status_label }}</span>
+            {% else %}
+              <span class="badge ok">Fresh ({{ p.days_left }}d left)</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="row-actions">
+              {% if p.status == 'expired' %}
+                <form method="post" action="{{ url_for('discard_product', product_id=p.id) }}" 
+                      onsubmit="return confirm('Discard {{ p.quantity }} unit(s) of {{ p.name|e }}? This will mark ₹{{ "%.2f"|format(risk_val) }} as Loss from Expired Products in your analytics.');"
+                      style="display:inline-flex; align-items:center; gap:6px;">
+                  <input type="hidden" name="quantity" value="{{ p.quantity }}">
+                  <input type="hidden" name="reason" value="EXPIRED">
+                  <button type="submit" class="link-danger" style="font-size:0.82rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border:1px solid var(--red); border-radius:6px; background:rgba(192,38,45,0.08); cursor:pointer;">
+                    🗑️ Discard & Record Loss
+                  </button>
+                </form>
+              {% else %}
+                <a href="{{ url_for('stock', product_id=p.id) }}" style="font-size:0.85rem;">
+                  Stock Movement →
+                </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    No products have expiry dates entered yet. 
+    <br><small class="muted">Add an expiry date when adding or editing products in the catalog.</small>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}
